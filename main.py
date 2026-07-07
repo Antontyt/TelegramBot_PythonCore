@@ -1,7 +1,5 @@
 import asyncio
-#from os import getenv
 
-#from dotenv import load_dotenv
 from config import TELEGRAM_TOKEN
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
@@ -12,22 +10,21 @@ from aiogram.exceptions import (
     TelegramConflictError,
 )
 
-#load_dotenv()
-
-#TELEGRAM_TOKEN = getenv("TELEGRAM_TOKEN")
-#if not TELEGRAM_TOKEN or not TELEGRAM_TOKEN.strip():
-#    raise ValueError(
-#        "TELEGRAM_TOKEN не найден или пустой. "
-#        "Проверь, что в .env есть строка TELEGRAM_TOKEN=твой_токен"
-#    )
-#print("Успешно получен TELEGRAM_TOKEN")
-
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Hello! I'm a bot and this is my first message.")
+    await message.answer("Welcome message for start command.")
+
+
+@dp.message(Command("help"))
+async def command_help_handler(message: Message) -> None:
+    await message.answer(
+        "📖 Справка:\n\n"
+        "/start — запустить бота\n"
+        "/help — показать это сообщение"
+    )
 
 async def main():
     try:
