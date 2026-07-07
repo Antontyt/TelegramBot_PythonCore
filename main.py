@@ -17,12 +17,16 @@ dp = Dispatcher()
 async def command_start_handler(message: Message) -> None:
     await message.answer("Welcome message for start command.")
 
+@dp.message(Command("random"))
+async def command_random_handler(message: Message) -> None:
+    await message.answer("Random handler")
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message) -> None:
     await message.answer(
         "📖 Справка:\n\n"
         "/start — запустить бота\n"
+        "/random — рандомный факт от ChatGPT\n"
         "/help — показать это сообщение"
     )
 
