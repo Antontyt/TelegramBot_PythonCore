@@ -1,5 +1,57 @@
 # 🤖 AI Telegram Bot
 
+**🌐 Language / Язык:** [English](#-english) | [Русский](#-русский)
+
+---
+
+## English
+
+Multifunctional Telegram bot powered by OpenAI (ChatGPT + Whisper).
+It answers questions, holds dialogues on behalf of famous personalities,
+runs quizzes, and recognizes voice messages.
+
+---
+
+### ✨ Features
+
+- 🎲 **Random fact** — a short science fact on request
+- 💬 **ChatGPT interface** — thoughtful answer to any question (with an anti-hallucination prompt)
+- 🎭 **Dialogue with a famous personality** — chat on behalf of Elon Musk, Steve Jobs, Oprah Winfrey
+- 🧠 **Quiz** — quiz with topic & question generation, answer checked by meaning
+- 🎤 **Voice ChatGPT** — speech recognition via Whisper (Russian language)
+- 📊 **Statistics** — counting GPT requests
+
+---
+
+### 🛠 Technologies
+
+- Python 3.10+
+- aiogram 3.x — asynchronous framework for the Telegram Bot API
+- OpenAI API — ChatGPT (gpt-4o / gpt-4o-mini) + Whisper
+- asyncio — asynchronous processing
+
+---
+
+### 📦 Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/USERNAME/REPO.git
+cd REPO
+
+# 2. Create a virtual environment
+python -m venv venv
+source venv/bin/activate        # Linux/Mac
+venv\Scripts\activate           # Windows
+
+# 3. Install dependencies
+pip install -r requirements.txt
+```
+
+# 🤖 AI Telegram Bot
+
+## Русский
+
 Многофункциональный Telegram-бот на базе OpenAI (ChatGPT + Whisper).
 Отвечает на вопросы, ведёт диалог от лица известных личностей,
 проводит викторину и распознаёт голосовые сообщения.
