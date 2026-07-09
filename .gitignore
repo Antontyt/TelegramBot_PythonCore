@@ -13,3 +13,6 @@ env/
 .env
 *.key
 stats.json
+
+# Временные файлы
+tmp/

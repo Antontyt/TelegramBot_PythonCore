@@ -29,7 +29,6 @@ def quiz_topics_kb(topics: list[str]) -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-
 def quiz_after_answer_kb() -> InlineKeyboardMarkup:
     """Кнопки после ответа: ещё вопрос / сменить тему / закончить."""
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -37,3 +36,8 @@ def quiz_after_answer_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📚 Сменить тему", callback_data="quiz:change")],
         [InlineKeyboardButton(text="🏁 Закончить квиз", callback_data="quiz:stop")],
     ])
+
+def voice_finish_keyboard() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Завершить", callback_data="voice_finish")
+    return kb.as_markup()

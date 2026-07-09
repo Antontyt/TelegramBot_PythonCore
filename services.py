@@ -194,3 +194,25 @@ async def quiz_check_answer(question: str, correct_answer: str, user_answer: str
             "is_correct": None,
             "verdict": "😔 Не удалось проверить ответ. Попробуй ещё раз.",
         }
+
+async def speech_to_text(file_path: str) -> str | None:
+    """
+    Распознаёт речь из аудиофайла через Whisper.
+    Возвращает текст или None при ошибке.
+    file_path — путь к .ogg файлу в tmp.
+    """
+    try:
+        with open(file_path, "rb") as audio:
+            transcript = await client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio,
+                language="ru",        # ← жёстко задаём русский, убираем угадывание
+            )
+        return transcript.text
+
+    except (APIStatusError, APIConnectionError, RateLimitError) as e:
+        print(f"[Whisper Error] {e}")
+        return None
+    except Exception as e:
+        print(f"[Whisper Error] unexpected: {e}")
+        return None

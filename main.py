@@ -1,9 +1,13 @@
 import asyncio
 import os
+import random
+import uuid
 from config import TELEGRAM_TOKEN
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
+from aiogram.enums import ParseMode
 from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.client.default import DefaultBotProperties
 from aiogram.exceptions import (
     TelegramUnauthorizedError,
     TelegramNetworkError,
@@ -14,24 +18,43 @@ from aiogram.exceptions import (
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-
-from keyboards import random_keyboard, talk_persons_keyboard, talk_finish_keyboard, quiz_topics_kb, quiz_after_answer_kb
-from services import get_random_fact, ask_assistant, talk_to_person, PERSONS, quiz_get_topics, quiz_get_question, quiz_check_answer
-from stats import add_user, get_stats   # добавить в импорты
+from keyboards import (
+    random_keyboard,
+    talk_persons_keyboard,
+    talk_finish_keyboard,
+    quiz_topics_kb,
+    quiz_after_answer_kb,
+    voice_finish_keyboard
+)
+from services import get_random_fact, ask_assistant, talk_to_person, PERSONS, quiz_get_topics, quiz_get_question, quiz_check_answer, speech_to_text
+from stats import add_user, get_stats
 
 storage = MemoryStorage()
-bot = Bot(token=TELEGRAM_TOKEN)
+bot = Bot(
+    token=TELEGRAM_TOKEN,
+    default = DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
 dp = Dispatcher(storage=storage)
+voice_mode: set[int] = set()
 
-# ── ЕДИНЫЙ СПИСОК КОМАНД (правим только здесь!) ──
+# ── ЕДИНЫЙ СПИСОК КОМАНД ──
 COMMANDS = {
     "🚀 /start":  "запустить бота",
     "🤖 /gpt": "задать вопрос ChatGPT",
     "🎭 /talk":   "поговорить с известной личностью",
     "🎲 /random": "получить рандомный факт",
     "🧠 /quiz": "играть в Квиз",
+    "/voice": "пообщаеться голосом",
     "❓ /help":   "показать это сообщение",
 }
+
+FALLBACK_PHRASES = [
+    "Хм, я такого не понимаю 🤔",
+    "Это что-то новенькое 😅 Я пока такому не обучен.",
+    "Я живой, честно! Просто не разобрал команду 🤖",
+    "Мои нейроны напряглись, но не сработали 🧠",
+    "Кажется, мы говорим на разных языках 😄",
+]
 
 def build_commands_list(exclude: set = None) -> str:
     """Собирает список команд в текст. exclude — что скрыть."""
@@ -58,7 +81,7 @@ HELP_TEXT = (
     + build_commands_list()   # тут показываем ВСЁ
 )
 
-# ---------- СОСТОЯНИЯ FSM ----------
+# ---------- СОСТОЯНИЯ ----------
 class GptStates(StatesGroup):
     waiting_for_question = State()      # режим "ждём вопрос от юзера"
 
@@ -117,11 +140,27 @@ async def send_talk(message: Message):
         reply_markup=talk_persons_keyboard(),
     )
 
+def plural(number: int, one: str, few: str, many: str) -> str:
+    """
+    number — число
+    one  — форма для 1 (пользователь, запрос)
+    few  — форма для 2-4 (пользователя, запроса)
+    many — форма для 5-0 (пользователей, запросов)
+    """
+    n = abs(number) % 100
+    if 11 <= n <= 14:
+        return many
+    n %= 10
+    if n == 1:
+        return one
+    if 2 <= n <= 4:
+        return few
+    return many
+
 # ---------- КОМАНДЫ ----------
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
     add_user(message.from_user.id)      # регистрируем пользователя
-
     stats = get_stats()
 
     text = (
@@ -142,7 +181,7 @@ async def command_random_handler(message: Message):
 
 @dp.message(Command("gpt"))
 async def cmd_gpt(message: Message, state: FSMContext):
-    # отсылаем заготовленное изображение (требование ТЗ)
+    # отсылаем заготовленное изображение
     photo = FSInputFile("images/gpt.jpg")
     await message.answer_photo(photo)
 
@@ -156,12 +195,12 @@ async def cmd_gpt(message: Message, state: FSMContext):
 async def cmd_talk(message: Message):
     await send_talk(message)
 
-# --- выбор личности (кнопки talk_musk / talk_jobs / talk_oprah) ---
+# --- выбор личности ---
 @dp.callback_query(F.data.startswith("talk_person:"))
 async def choose_person(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
-    person_key = callback.data.split(":")[1]     # talk_person:musk → musk
+    person_key = callback.data.split(":")[1]
     person = PERSONS[person_key]
 
     # сохраняем выбранную личность в FSM
@@ -226,14 +265,13 @@ async def process_gpt_question(message: Message, state: FSMContext):
         + "\n\n"
         + "👋 Диалог завершён.\n"
         + "Если нужно повторить — введи команду /gpt "
-        + "или воспользуйся командой /help"
+        + "или воспользуйся командой /start"
     )
 
 @dp.message(Command("quiz"))
 async def cmd_quiz(message: Message, state: FSMContext):
     await state.clear()
 
-    # заготовленное изображение (в едином стиле с /gpt)
     photo = FSInputFile("images/quiz.jpg")
     await message.answer_photo(photo)
 
@@ -363,12 +401,98 @@ async def quiz_stop(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(
         "🏁 Квиз завершён. Спасибо за игру!\n"
-        "Для нового — введи /quiz или /help"
+        "Для нового — введи /quiz или /start"
+    )
+
+@dp.message(Command("voice"))
+async def voice_command(message: Message):
+    voice_mode.add(message.from_user.id)
+    await message.answer(
+        "🎤 Режим голосовой беседы включён.\n"
+        "Отправляй голосовые сообщения — я буду отвечать.",
+        reply_markup=voice_finish_keyboard(),
+    )
+@dp.callback_query(F.data == "voice_finish")
+async def voice_finish(callback: CallbackQuery):
+    voice_mode.discard(callback.from_user.id)
+    await callback.message.edit_reply_markup(reply_markup=None)  # убираем кнопку
+    await callback.message.answer("✅ Голосовая беседа завершена.")
+    await command_start_handler(callback.message)                       # ← показываем меню /start
+    await callback.answer()  # убираем «часики» на кнопке
+
+@dp.message(F.voice)
+async def voice_handler(message: Message):
+    user_id = message.from_user.id
+
+    if user_id not in voice_mode:
+        await message.answer("ℹ️ Чтобы общаться голосом, включи режим командой /voice.")
+        return
+
+    os.makedirs("tmp", exist_ok=True)
+    file_path = f"tmp/{user_id}_{uuid.uuid4().hex}.ogg"
+
+    try:
+        await message.bot.download(message.voice, destination=file_path)
+
+        # показываем "печатает..." пока идёт обработка
+        await message.bot.send_chat_action(message.chat.id, "typing")
+
+        text = await speech_to_text(file_path)
+
+        if not text:
+            await message.answer(
+                "⚠️ Не удалось распознать речь. Попробуй ещё раз 🎤",
+                reply_markup=voice_finish_keyboard(),
+            )
+            return
+
+        await message.answer(f"🗣 {text}")
+
+        # снова "печатает..." перед ответом ассистента
+        await message.bot.send_chat_action(message.chat.id, "typing")
+
+        answer = await ask_assistant(text)
+        await message.answer(f"🤖 {answer}", reply_markup=voice_finish_keyboard())
+
+    except Exception as e:
+        await message.answer(f"⚠️ Ошибка обработки голоса: {e}")
+        print(f"[Voice Handler] {e}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+@dp.message(F.text, lambda m: m.from_user.id in voice_mode)
+async def text_in_voice_mode(message: Message):
+    await message.answer(
+        "🎤 В этом режиме мы общаемся только голосовыми сообщениями.\n\n"
+        "Но ты всегда можешь воспользоваться другими режимами, которые у меня есть 🙂",
+        reply_markup=voice_finish_keyboard(),
     )
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message):
     await message.answer(HELP_TEXT)
+
+@dp.message()
+async def fallback(message: Message):
+    stats = get_stats()
+    users = stats['users_count']
+    requests = stats['gpt_requests']
+
+    users_word = plural(users, "пользователем", "пользователями", "пользователями")
+    req_word = plural(requests, "запрос", "запроса", "запросов")
+
+    text = (
+        f"Я уже поработал с {users} {users_word} "
+        f"и выполнил {requests} {req_word} к ChatGPT 💪\n"
+        "\n"
+        f"{random.choice(FALLBACK_PHRASES)}\n"
+        "\n"
+        "Вот что я могу тебе предложить:\n"
+        f"{build_commands_list()}"
+    )
+
+    await message.answer(text)
 
 # ---------- КНОПКИ ----------
 @dp.callback_query(F.data == "finish")
