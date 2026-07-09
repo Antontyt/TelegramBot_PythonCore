@@ -1,7 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-
 def random_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Хочу ещё факт", callback_data="more_fact")
@@ -21,3 +20,20 @@ def talk_finish_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(text="👋 Закончить", callback_data="talk_finish")
     return kb.as_markup()
+
+def quiz_topics_kb(topics: list[str]) -> InlineKeyboardMarkup:
+    """Кнопки выбора темы. Темы передаём индексами (лимит callback_data 64 байта)."""
+    rows = [
+        [InlineKeyboardButton(text=t, callback_data=f"topic:{i}")]
+        for i, t in enumerate(topics)
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def quiz_after_answer_kb() -> InlineKeyboardMarkup:
+    """Кнопки после ответа: ещё вопрос / сменить тему / закончить."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔁 Ещё вопрос", callback_data="quiz:next")],
+        [InlineKeyboardButton(text="📚 Сменить тему", callback_data="quiz:change")],
+        [InlineKeyboardButton(text="🏁 Закончить квиз", callback_data="quiz:stop")],
+    ])

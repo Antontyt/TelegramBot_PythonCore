@@ -15,8 +15,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from keyboards import random_keyboard, talk_persons_keyboard, talk_finish_keyboard
-from services import get_random_fact, ask_assistant, talk_to_person, PERSONS
+from keyboards import random_keyboard, talk_persons_keyboard, talk_finish_keyboard, quiz_topics_kb, quiz_after_answer_kb
+from services import get_random_fact, ask_assistant, talk_to_person, PERSONS, quiz_get_topics, quiz_get_question, quiz_check_answer
 
 storage = MemoryStorage()
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -28,6 +28,7 @@ COMMANDS = {
     "🤖 /gpt": "задать вопрос ChatGPT",
     "🎭 /talk":   "поговорить с известной личностью",
     "🎲 /random": "получить рандомный факт",
+    "🎲 /quiz": "играть в Квиз",
     "❓ /help":   "показать это сообщение",
 }
 
@@ -62,6 +63,10 @@ class GptStates(StatesGroup):
 
 class TalkStates(StatesGroup):
     chatting = State()      # режим диалога с личностью
+
+class QuizStates(StatesGroup):
+    choosing_topic = State()
+    waiting_answer = State()
 
 # ---------- ЛОГИКА (общие функции для команд и кнопок) ----------
 async def send_start(message: Message):
@@ -207,6 +212,143 @@ async def process_gpt_question(message: Message, state: FSMContext):
         + "👋 Диалог завершён.\n"
         + "Если нужно повторить — введи команду /gpt "
         + "или воспользуйся командой /help"
+    )
+
+@dp.message(Command("quiz"))
+async def cmd_quiz(message: Message, state: FSMContext):
+    await state.clear()
+
+    # заготовленное изображение (в едином стиле с /gpt)
+    photo = FSInputFile("images/quiz.jpg")
+    await message.answer_photo(photo)
+
+    topics = await quiz_get_topics()
+    await state.update_data(topics=topics)
+
+    await message.answer(
+        "🧠 Выбери тему квиза:",
+        reply_markup=quiz_topics_kb(topics),
+    )
+    await state.set_state(QuizStates.choosing_topic)
+
+# --- выбор темы (кнопки topic:0, topic:1, ...) ---
+@dp.callback_query(QuizStates.choosing_topic, F.data.startswith("topic:"))
+async def quiz_choose_topic(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+
+    data = await state.get_data()
+    topics = data.get("topics", [])
+    idx = int(callback.data.split(":")[1])
+
+    if idx >= len(topics):
+        await callback.message.answer("Тема недоступна. Начни заново: /quiz")
+        return
+
+    topic = topics[idx]
+
+    # прячем кнопки выбора темы
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+    wait_msg = await callback.message.answer("🤔 Готовлю вопрос...")
+    q = await quiz_get_question(topic)
+    await wait_msg.delete()
+
+    if q is None:
+        await callback.message.answer(
+            "😔 Не удалось сгенерировать вопрос. Попробуй ещё раз: /quiz"
+        )
+        await state.clear()
+        return
+
+    await state.update_data(
+        topic=topic,
+        question=q["question"],
+        correct=q["correct_answer"],
+    )
+    await callback.message.answer(
+        f"Тема: <b>{topic}</b>\n\n❓ {q['question']}"
+    )
+    await state.set_state(QuizStates.waiting_answer)
+
+# --- обработка ответа пользователя ---
+@dp.message(QuizStates.waiting_answer)
+async def quiz_process_answer(message: Message, state: FSMContext):
+    if not message.text:
+        await message.answer("Пожалуйста, отправь ответ текстом.")
+        return
+
+    data = await state.get_data()
+
+    wait_msg = await message.answer("🤔 Проверяю ответ...")
+    result = await quiz_check_answer(
+        data["question"], data["correct"], message.text
+    )
+    await wait_msg.delete()
+
+    is_correct = result["is_correct"]
+    verdict = result["verdict"]
+
+    correct_count = data.get("correct_count", 0)
+    wrong_count = data.get("wrong_count", 0)
+
+    # надёжный учёт по флагу
+    if is_correct is True:
+        correct_count += 1
+    elif is_correct is False:
+        wrong_count += 1
+    # is_correct is None -> сбой проверки, не засчитываем
+
+    await state.update_data(
+        correct_count=correct_count,
+        wrong_count=wrong_count,
+    )
+
+    score_line = f"\n\n📊 Счёт: ✅ {correct_count} · ❌ {wrong_count}"
+    await message.answer(
+        verdict + score_line,
+        reply_markup=quiz_after_answer_kb(),
+    )
+
+# --- ещё вопрос по той же теме ---
+@dp.callback_query(QuizStates.waiting_answer, F.data == "quiz:next")
+async def quiz_next(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    data = await state.get_data()
+
+    wait_msg = await callback.message.answer("🤔 Готовлю вопрос...")
+    q = await quiz_get_question(data["topic"])
+    await wait_msg.delete()
+
+    if q is None:
+        await callback.message.answer("😔 Не удалось сгенерировать вопрос. Попробуй ещё раз.")
+        return
+
+    await state.update_data(question=q["question"], correct=q["correct_answer"])
+    await callback.message.answer(f"❓ {q['question']}")
+
+# --- сменить тему ---
+@dp.callback_query(QuizStates.waiting_answer, F.data == "quiz:change")
+async def quiz_change(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+
+    topics = await quiz_get_topics()
+    await state.update_data(topics=topics)
+
+    await callback.message.answer(
+        "📚 Выбери новую тему:",
+        reply_markup=quiz_topics_kb(topics),
+    )
+    await state.set_state(QuizStates.choosing_topic)
+
+# --- закончить квиз ---
+@dp.callback_query(QuizStates.waiting_answer, F.data == "quiz:stop")
+async def quiz_stop(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
+        "🏁 Квиз завершён. Спасибо за игру!\n"
+        "Для нового — введи /quiz или /help"
     )
 
 @dp.message(Command("help"))
