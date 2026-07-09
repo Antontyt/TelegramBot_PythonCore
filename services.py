@@ -1,6 +1,7 @@
 import json  # добавить к импортам в начало файла
 from openai import AsyncOpenAI, APIStatusError, APIConnectionError, RateLimitError
 from config import OPENAI_API_KEY
+from stats import add_gpt_request
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -58,6 +59,7 @@ async def ask_gpt(prompt: str, model: str = DEFAULT_MODEL) -> str:
             model=model,
             messages=[{"role": "user", "content": prompt}],
         )
+        add_gpt_request()
         return response.choices[0].message.content
 
     except APIStatusError as e:

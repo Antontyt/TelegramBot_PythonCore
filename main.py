@@ -17,6 +17,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from keyboards import random_keyboard, talk_persons_keyboard, talk_finish_keyboard, quiz_topics_kb, quiz_after_answer_kb
 from services import get_random_fact, ask_assistant, talk_to_person, PERSONS, quiz_get_topics, quiz_get_question, quiz_check_answer
+from stats import add_user, get_stats   # добавить в импорты
 
 storage = MemoryStorage()
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -28,7 +29,7 @@ COMMANDS = {
     "🤖 /gpt": "задать вопрос ChatGPT",
     "🎭 /talk":   "поговорить с известной личностью",
     "🎲 /random": "получить рандомный факт",
-    "🎲 /quiz": "играть в Квиз",
+    "🧠 /quiz": "играть в Квиз",
     "❓ /help":   "показать это сообщение",
 }
 
@@ -69,7 +70,7 @@ class QuizStates(StatesGroup):
     waiting_answer = State()
 
 # ---------- ЛОГИКА (общие функции для команд и кнопок) ----------
-async def send_start(message: Message):
+async def send_start_message(message: Message):
     await message.answer(START_TEXT)
 
 async def send_random(message: Message):
@@ -119,7 +120,21 @@ async def send_talk(message: Message):
 # ---------- КОМАНДЫ ----------
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await send_start(message)
+    add_user(message.from_user.id)      # регистрируем пользователя
+
+    stats = get_stats()
+
+    text = (
+        "📈 Статистика за всё время моей работы:\n"
+        f"👥 Пользователей: {stats['users_count']}\n"
+        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}\n"
+        "\n"
+        "Привет! Я бот и вот мои полезные сервисы для тебя.\n"
+        "\n"
+        f"{build_commands_list()}"       # <-- меню собирается автоматически
+    )
+
+    await message.answer(text)
 
 @dp.message(Command("random"))
 async def command_random_handler(message: Message):
@@ -367,7 +382,7 @@ async def talk_finish_button(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.clear()                                    # выходим из диалога
     await callback.message.edit_reply_markup(reply_markup=None)  # прячем кнопку
-    await send_start(callback.message)                     # ← как /start ✅
+    await send_start_message(callback.message)                     # ← как /start ✅
 
 @dp.callback_query(F.data == "more_fact")
 async def more_fact_button(callback: CallbackQuery):
