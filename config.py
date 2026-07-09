@@ -6,7 +6,7 @@ load_dotenv()
 
 # Читаем значения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # --- Telegram ---
 if not TELEGRAM_TOKEN or not TELEGRAM_TOKEN.strip():
@@ -17,9 +17,9 @@ if not TELEGRAM_TOKEN or not TELEGRAM_TOKEN.strip():
 print("Успешно получен TELEGRAM_TOKEN")
 
 # --- OpenAI ---
-if not OPENAI_TOKEN or not OPENAI_TOKEN.strip():
+if not OPENAI_API_KEY or not OPENAI_API_KEY.strip():
     raise ValueError(
-        "OPENAI_TOKEN не найден или пустой. "
-        "Проверь, что в .env есть строка OPENAI_TOKEN=твой_токен"
+        "OPENAI_API_KEY не найден или пустой. "
+        "Проверь, что в .env есть строка OPENAI_API_KEY=твой_токен"
     )
-print("Успешно получен OPENAI_TOKEN")
+print("Успешно получен OPENAI_API_KEY")
