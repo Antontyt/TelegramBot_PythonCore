@@ -2,7 +2,7 @@ import asyncio
 import os
 import random
 import uuid
-from config import TELEGRAM_TOKEN
+from config import TELEGRAM_TOKEN, BOT_VERSION
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
@@ -70,24 +70,24 @@ def build_commands_list(exclude: set = None) -> str:
     ]
     return "\n".join(lines)
 
-GITHUB_URL = "https://github.com/Antontyt/TelegramBot_PythonCore"  # ← вынесли в константу
+GITHUB_URL = "https://github.com/Antontyt/TelegramBot_PythonCore"
 
 MENU_HINT = (
     "Вот что ещё можно попробовать 👇\n\n"
-    + build_commands_list(exclude={"/start", "/help"})   # только основное
+    + build_commands_list(exclude={"/start", "/help"})
 )
 
 HELP_TEXT = (
     "📖 Справка:\n\n"
-    + build_commands_list()   # тут показываем ВСЁ
+    + build_commands_list()
 )
 
 # ---------- СОСТОЯНИЯ ----------
 class GptStates(StatesGroup):
-    waiting_for_question = State()      # режим "ждём вопрос от юзера"
+    waiting_for_question = State()
 
 class TalkStates(StatesGroup):
-    chatting = State()      # режим диалога с личностью
+    chatting = State()
 
 class QuizStates(StatesGroup):
     choosing_topic = State()
@@ -102,7 +102,7 @@ async def send_random(message: Message):
             "⚙️ Данный функционал временно не работает: "
             "ведутся технические работы (отсутствует изображение fact.jpg)."
         )
-        return   # выходим — дальше не идём
+        return
 
     # 2. Отправляем заготовленное изображение
     photo = FSInputFile(photo_path)
@@ -167,6 +167,7 @@ async def send_start_message(message: Message):
         f"{build_commands_list(exclude={'/start', '/help'})}"
         f"\n\n💡 Понравился проект?\nБуду рад обратной связи и звёздочке ⭐️"
         f"\n{GITHUB_URL}"
+        f"\n🔖 Версия: {BOT_VERSION}"
     )
     await message.answer(text)
 
@@ -283,7 +284,7 @@ async def cmd_quiz(message: Message, state: FSMContext):
     )
     await state.set_state(QuizStates.choosing_topic)
 
-# --- выбор темы (кнопки topic:0, topic:1, ...) ---
+# --- выбор темы ---
 @dp.callback_query(QuizStates.choosing_topic, F.data.startswith("topic:"))
 async def quiz_choose_topic(callback: CallbackQuery, state: FSMContext):
     await callback.answer()

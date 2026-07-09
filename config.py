@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 # Загружаем переменные из .env в окружение
 load_dotenv()
 
+# Версия бота — единое место истины 🎯
+BOT_VERSION = "1.0.0"
+
 # Читаем значения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
