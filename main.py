@@ -22,6 +22,13 @@ START_TEXT = (
     "/help — помощь"
 )
 
+MENU_HINT = (
+    "Вот что ещё можно попробовать 👇\n\n"
+    "🤖 /gpt — задать вопрос ChatGPT\n"
+    "🎲 /random — получить случайный факт"
+)
+
+
 HELP_TEXT = (
     "📖 Справка:\n\n"
     "/start — запустить бота\n"
@@ -62,7 +69,7 @@ async def send_random(message: Message):
 
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Welcome message for start command.")
+    await send_start(message)
 
 @dp.message(Command("random"))
 async def command_random_handler(message: Message):
@@ -76,9 +83,9 @@ async def command_help_handler(message: Message):
 
 @dp.callback_query(F.data == "finish")
 async def finish_button(callback: CallbackQuery):
-    await callback.answer()              # убираем "часики" на кнопке
-    await send_start(callback.message)   # работает как /start
-
+    await callback.answer()                          # убираем "часики"
+    await callback.message.edit_reply_markup(reply_markup=None)  # прячем кнопки у факта
+    await callback.message.answer(MENU_HINT)         # шлём подсказку
 
 @dp.callback_query(F.data == "more_fact")
 async def more_fact_button(callback: CallbackQuery):
