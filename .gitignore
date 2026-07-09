@@ -1,3 +1,14 @@
-.venv
+# PyCharm
 .idea
+
+# Python
+__pycache__/
+
+# Виртуальное окружение
+venv/
+.venv/
+env/
+
+# Секреты (важно при работе с OpenAI!)
 .env
+*.key
