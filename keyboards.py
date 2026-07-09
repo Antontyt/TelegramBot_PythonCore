@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.exceptions import TelegramBadRequest
 
 def random_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -41,3 +42,10 @@ def voice_finish_keyboard() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="✅ Завершить", callback_data="voice_finish")
     return kb.as_markup()
+
+async def hide_keyboard(callback: CallbackQuery):
+    """Прячет inline-кнопки у сообщения (безопасно)."""
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramBadRequest:
+        pass  # кнопки уже убраны (двойной клик) — норм

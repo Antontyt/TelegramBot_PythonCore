@@ -18,13 +18,16 @@ from aiogram.exceptions import (
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+
+# --- Keyboards ---
 from keyboards import (
     random_keyboard,
     talk_persons_keyboard,
     talk_finish_keyboard,
     quiz_topics_kb,
     quiz_after_answer_kb,
-    voice_finish_keyboard
+    voice_finish_keyboard,
+    hide_keyboard
 )
 from services import get_random_fact, ask_assistant, talk_to_person, PERSONS, quiz_get_topics, quiz_get_question, quiz_check_answer, speech_to_text
 from stats import add_user, get_stats
@@ -44,8 +47,9 @@ COMMANDS = {
     "🎭 /talk":   "поговорить с известной личностью",
     "🎲 /random": "получить рандомный факт",
     "🧠 /quiz": "играть в Квиз",
-    "/voice": "пообщаеться голосом",
-    "❓ /help":   "показать это сообщение",
+    "🎙️ /voice": "пообщаеться голосом",
+    "📊 /stats": "общедоступная статистика",
+    "❓ /help":   "показать это сообщение"
 }
 
 FALLBACK_PHRASES = [
@@ -66,10 +70,7 @@ def build_commands_list(exclude: set = None) -> str:
     ]
     return "\n".join(lines)
 
-START_TEXT = (
-    "Привет! Я бот и вот мои полезные сервисы для тебя.\n\n"
-    + build_commands_list(exclude={"/start"})   # в приветствии /start лишний
-)
+GITHUB_URL = "https://github.com/Antontyt/TelegramBot_PythonCore"  # ← вынесли в константу
 
 MENU_HINT = (
     "Вот что ещё можно попробовать 👇\n\n"
@@ -93,9 +94,6 @@ class QuizStates(StatesGroup):
     waiting_answer = State()
 
 # ---------- ЛОГИКА (общие функции для команд и кнопок) ----------
-async def send_start_message(message: Message):
-    await message.answer(START_TEXT)
-
 async def send_random(message: Message):
     # 1. Проверяем, есть ли картинка
     photo_path = "images/fact.jpg"
@@ -158,22 +156,23 @@ def plural(number: int, one: str, few: str, many: str) -> str:
     return many
 
 # ---------- КОМАНДЫ ----------
-@dp.message(Command("start"))
-async def command_start_handler(message: Message) -> None:
-    add_user(message.from_user.id)      # регистрируем пользователя
+async def send_start_message(message: Message):
+    add_user(message.from_user.id)
     stats = get_stats()
-
     text = (
-        "📈 Статистика за всё время моей работы:\n"
+        "📊 Статистика за всё время моей работы:\n"
         f"👥 Пользователей: {stats['users_count']}\n"
-        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}\n"
-        "\n"
-        "Привет! Я бот и вот мои полезные сервисы для тебя.\n"
-        "\n"
-        f"{build_commands_list()}"       # <-- меню собирается автоматически
+        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}\n\n"
+        "Привет! Я бот, и вот мои полезные сервисы для тебя:\n\n"
+        f"{build_commands_list(exclude={'/start', '/help'})}"
+        f"\n\n💡 Понравился проект?\nБуду рад обратной связи и звёздочке ⭐️"
+        f"\n{GITHUB_URL}"
     )
-
     await message.answer(text)
+
+@dp.message(Command("start"))
+async def command_start_handler(message: Message):
+    await send_start_message(message)
 
 @dp.message(Command("random"))
 async def command_random_handler(message: Message):
@@ -417,7 +416,7 @@ async def voice_finish(callback: CallbackQuery):
     voice_mode.discard(callback.from_user.id)
     await callback.message.edit_reply_markup(reply_markup=None)  # убираем кнопку
     await callback.message.answer("✅ Голосовая беседа завершена.")
-    await command_start_handler(callback.message)                       # ← показываем меню /start
+    await send_start_message(callback.message)                       # ← показываем меню /start
     await callback.answer()  # убираем «часики» на кнопке
 
 @dp.message(F.voice)
@@ -430,28 +429,31 @@ async def voice_handler(message: Message):
 
     os.makedirs("tmp", exist_ok=True)
     file_path = f"tmp/{user_id}_{uuid.uuid4().hex}.ogg"
+    status_msg = None                       # ← держим статус-сообщение
 
     try:
         await message.bot.download(message.voice, destination=file_path)
 
-        # показываем "печатает..." пока идёт обработка
-        await message.bot.send_chat_action(message.chat.id, "typing")
-
+        # ЭТАП 1: распознавание
+        status_msg = await message.answer("⏳ Идёт обработка...")   # ← показали
         text = await speech_to_text(file_path)
 
         if not text:
+            await status_msg.delete()                              # ← убрали
             await message.answer(
                 "⚠️ Не удалось распознать речь. Попробуй ещё раз 🎤",
                 reply_markup=voice_finish_keyboard(),
             )
             return
 
+        await status_msg.delete()                                  # ← убрали
         await message.answer(f"🗣 {text}")
 
-        # снова "печатает..." перед ответом ассистента
-        await message.bot.send_chat_action(message.chat.id, "typing")
-
+        # ЭТАП 2: генерация ответа
+        status_msg = await message.answer("⏳ Подготавливаю ответ...")  # ← показали
         answer = await ask_assistant(text)
+        await status_msg.delete()                                  # ← убрали
+
         await message.answer(f"🤖 {answer}", reply_markup=voice_finish_keyboard())
 
     except Exception as e:
@@ -468,6 +470,16 @@ async def text_in_voice_mode(message: Message):
         "Но ты всегда можешь воспользоваться другими режимами, которые у меня есть 🙂",
         reply_markup=voice_finish_keyboard(),
     )
+
+@dp.message(Command("stats"))
+async def command_stats_handler(message: Message):
+    stats = get_stats()
+    text = (
+        "📊 Статистика за всё время моей работы:\n"
+        f"👥 Пользователей: {stats['users_count']}\n"
+        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}"
+    )
+    await message.answer(text)
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message):
@@ -497,16 +509,16 @@ async def fallback(message: Message):
 # ---------- КНОПКИ ----------
 @dp.callback_query(F.data == "finish")
 async def finish_button(callback: CallbackQuery):
-    await callback.answer()                          # убираем "часики"
-    await callback.message.edit_reply_markup(reply_markup=None)  # прячем кнопки у факта
-    await callback.message.answer(MENU_HINT)         # шлём подсказку
+    await hide_keyboard(callback)
+    await callback.message.answer(MENU_HINT)
+    await callback.answer()                # ← ДОБАВИТЬ (убрать часики)
 
 @dp.callback_query(F.data == "talk_finish")
 async def talk_finish_button(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.clear()                                    # выходим из диалога
-    await callback.message.edit_reply_markup(reply_markup=None)  # прячем кнопку
-    await send_start_message(callback.message)                     # ← как /start ✅
+    await state.clear()
+    await hide_keyboard(callback)
+    await send_start_message(callback.message)
+    await callback.answer()                # ← ДОБАВИТЬ (убрать часики)
 
 @dp.callback_query(F.data == "more_fact")
 async def more_fact_button(callback: CallbackQuery):
