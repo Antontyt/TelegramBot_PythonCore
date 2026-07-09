@@ -36,8 +36,8 @@ runs quizzes, and recognizes voice messages.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/USERNAME/REPO.git
-cd REPO
+git clone https://github.com/Antontyt/TelegramBot_PythonCore.git
+cd TelegramBot_PythonCore
 
 # 2. Create a virtual environment
 python -m venv venv
@@ -82,8 +82,8 @@ pip install -r requirements.txt
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/USERNAME/REPO.git
-cd REPO
+git clone https://github.com/Antontyt/TelegramBot_PythonCore.git
+cd TelegramBot_PythonCore
 
 # 2. Создать виртуальное окружение
 python -m venv venv
@@ -92,3 +92,4 @@ venv\Scripts\activate           # Windows
 
 # 3. Установить зависимости
 pip install -r requirements.txt
+```
