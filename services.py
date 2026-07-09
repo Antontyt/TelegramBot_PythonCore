@@ -131,7 +131,7 @@ async def quiz_get_topics() -> list[str]:
 
 async def quiz_get_question(topic: str) -> dict | None:
     """
-    Генерирует вопрос + эталонный ответ по теме (Вариант Б).
+    Генерирует вопрос + эталонный ответ по теме
     Возвращает {"question": ..., "correct_answer": ...} или None при сбое.
     """
     prompt = (
@@ -148,7 +148,6 @@ async def quiz_get_question(topic: str) -> dict | None:
     except (json.JSONDecodeError, KeyError, TypeError):
         print(f"[Quiz] не удалось распарсить вопрос: {raw!r}")
     return None
-
 
 async def quiz_check_answer(question: str, correct_answer: str, user_answer: str) -> dict:
     """
@@ -175,7 +174,7 @@ async def quiz_check_answer(question: str, correct_answer: str, user_answer: str
 
     # --- fallback-парсинг ---
     try:
-        # убираем возможные ```json ... ``` обёртки
+        # убираем возможные ```
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.strip("`")
