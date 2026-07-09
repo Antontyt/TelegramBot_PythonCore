@@ -5,7 +5,11 @@ client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 RANDOM_PROMPT = "Расскажи один короткий интересный научный факт на русском языке. 2-3 предложения."
 
-async def ask_gpt(prompt: str) -> str:
+# Модель по умолчанию — если вызывающая функция не указала свою
+DEFAULT_MODEL = "gpt-4o-mini"
+
+
+async def ask_gpt(prompt: str, model: str = DEFAULT_MODEL) -> str:
     """
     Базовая функция: отправляет любой текст в ChatGPT и возвращает ответ.
     Ловит ошибки и возвращает понятное сообщение пользователю.
@@ -13,7 +17,7 @@ async def ask_gpt(prompt: str) -> str:
     """
     try:
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
         )
         return response.choices[0].message.content
@@ -44,4 +48,4 @@ async def ask_gpt(prompt: str) -> str:
 
 async def get_random_fact() -> str:
     """Запрашивает случайный факт (использует ask_gpt)."""
-    return await ask_gpt(RANDOM_PROMPT)
+    return await ask_gpt(RANDOM_PROMPT, model="gpt-4o-mini")
