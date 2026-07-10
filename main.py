@@ -443,7 +443,7 @@ async def voice_handler(message: Message):
         await message.answer(f"🤖 {answer}", reply_markup=voice_finish_keyboard())
 
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка обработки голоса: {e}")
+        await message.answer(f"⚠️ Ошибка обработки голосового сообщения")
         print(f"[Voice Handler] {e}")
     finally:
         if os.path.exists(file_path):
@@ -512,17 +512,29 @@ async def more_fact_button(callback: CallbackQuery):
     await send_random(callback.message)
 
 async def main():
-    try:
-        print("Бот запущен")
-        await dp.start_polling(bot)
-    except TelegramUnauthorizedError:
-        print("Ошибка: неверный токен. Проверь корректный ли TELEGRAM_TOKEN в .env")
-    except TelegramNetworkError:
-        print("Ошибка сети: нет доступа к Telegram. Проверь интернет/VPN")
-    except TelegramConflictError:
-        print("Ошибка: этот токен уже используется другим запущенным ботом")
-    except Exception as e:
-        print(f"Неизвестная ошибка: {e}")
+    while True:
+        try:
+            print("Бот запущен")
+            await dp.start_polling(bot)
+            break
+
+        except TelegramNetworkError:
+            print("Ошибка сети: нет доступа к Telegram. Проверь интернет/VPN")
+            print("Перезапуск через 5 сек...")
+            await asyncio.sleep(5)
+
+        except TelegramUnauthorizedError:
+            print("Ошибка: неверный токен. Проверь корректный ли TELEGRAM_TOKEN в .env")
+            break
+
+        except TelegramConflictError:
+            print("Ошибка: этот токен уже используется другим запущенным ботом")
+            break
+
+        except Exception as e:
+            print(f"Неизвестная ошибка: {e}. Перезапуск через 5 сек...")
+            await asyncio.sleep(5)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
