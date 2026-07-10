@@ -5,7 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Версия бота ---
-BOT_VERSION = "1.0.3"
+BOT_VERSION = "1.0.4"
+
+# --- Уровень логирования ----
+# Варианты: DEBUG / INFO / WARNING / ERROR / CRITICAL
+LOG_LEVEL = "INFO"
 
 # Читаем значения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")

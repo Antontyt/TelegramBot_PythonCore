@@ -1,7 +1,8 @@
 import logging
+from config import LOG_LEVEL
 
 logger = logging.getLogger("bot")
-logger.setLevel(logging.INFO)
+logger.setLevel(getattr(logging, LOG_LEVEL.upper(), logging.INFO))
 
 if not logger.handlers:
 
