@@ -47,7 +47,7 @@ COMMANDS = {
     "🎭 /talk":   "поговорить с известной личностью",
     "🎲 /random": "получить рандомный факт",
     "🧠 /quiz": "играть в Квиз",
-    "🎙️ /voice": "пообщаеться голосом",
+    "🎙️ /voice": "пообщаться голосом",
     "📊 /stats": "общедоступная статистика",
     "❓ /help":   "показать это сообщение"
 }
@@ -69,6 +69,25 @@ def build_commands_list(exclude: set = None) -> str:
         if cmd not in exclude
     ]
     return "\n".join(lines)
+
+async def send_image_or_block(message: Message, filename: str) -> bool:
+    """
+    Отправляет картинку из папки images/.
+    Возвращает True — если фото отправлено,
+    False — если файла нет (и юзеру ушло предупреждение).
+    """
+    photo_path = f"images/{filename}"
+
+    if not os.path.exists(photo_path):
+        await message.answer(
+            f"⚙️ Данный функционал временно не работает: \n"
+            f"ведутся технические работы (отсутствует изображение {filename})."
+        )
+        return False
+
+    photo = FSInputFile(photo_path)
+    await message.answer_photo(photo)
+    return True
 
 GITHUB_URL = "https://github.com/Antontyt/TelegramBot_PythonCore"
 
@@ -95,44 +114,26 @@ class QuizStates(StatesGroup):
 
 # ---------- ЛОГИКА (общие функции для команд и кнопок) ----------
 async def send_random(message: Message):
-    # 1. Проверяем, есть ли картинка
-    photo_path = "images/fact.jpg"
-    if not os.path.exists(photo_path):
-        await message.answer(
-            "⚙️ Данный функционал временно не работает: "
-            "ведутся технические работы (отсутствует изображение fact.jpg)."
-        )
+    # Проверяем и отправляем картинку
+    if not await send_image_or_block(message, "fact.jpg"):
         return
 
-    # 2. Отправляем заготовленное изображение
-    photo = FSInputFile(photo_path)
-    await message.answer_photo(photo)
-
-    # 3. Сообщаем, что думаем (запрос к ChatGPT занимает время)
+    # Сообщаем, что думаем (запрос к ChatGPT занимает время)
     wait_msg = await message.answer("Придумываю факт... 🤔")
 
-    # 4. Запрос к ChatGPT
+    # Запрос к ChatGPT
     fact = await get_random_fact()
 
-    # 5. Удаляем "думаю" и шлём факт с кнопками
+    # Удаляем "думаю" и шлём факт с кнопками
     await wait_msg.delete()
     await message.answer(fact, reply_markup=random_keyboard())
 
 async def send_talk(message: Message):
-    # 1. Проверяем картинку
-    photo_path = "images/talk.jpg"
-    if not os.path.exists(photo_path):
-        await message.answer(
-            "⚙️ Данный функционал временно не работает: \n"
-            "ведутся технические работы (отсутствует изображение talk.jpg)."
-        )
+    # Проверяем и отправляем картинку
+    if not await send_image_or_block(message, "talk.jpg"):
         return
 
-    # 2. Отправляем изображение
-    photo = FSInputFile(photo_path)
-    await message.answer_photo(photo)
-
-    # 3. Показываем выбор личности
+    # Показываем выбор личности
     await message.answer(
         "С кем хочешь пообщаться? Выбери личность 👇",
         reply_markup=talk_persons_keyboard()
@@ -181,18 +182,9 @@ async def command_random_handler(message: Message):
 
 @dp.message(Command("gpt"))
 async def cmd_gpt(message: Message, state: FSMContext):
-    # 1. Проверяем, есть ли картинка
-    photo_path = "images/gpt.jpg"
-    if not os.path.exists(photo_path):
-        await message.answer(
-            "⚙️ Данный функционал временно не работает: "
-            "ведутся технические работы (отсутствует изображение gpt.jpg)."
-        )
+    # Проверяем и отправляем картинку
+    if not await send_image_or_block(message, "gpt.jpg"):
         return
-
-    # 2. Отправляем заготовленное изображение
-    photo = FSInputFile(photo_path)
-    await message.answer_photo(photo)
 
     # приглашаем задать вопрос
     await message.answer("Напиши свой вопрос для ChatGPT 🤖")
@@ -238,21 +230,6 @@ async def process_talk(message: Message, state: FSMContext):
     answer = await talk_to_person(person["prompt"], message.text)
 
     await wait_msg.delete()
-    await message.answer(answer, reply_markup=talk_finish_keyboard())
-
-# --- обработка сообщений в режиме диалога ---
-@dp.message(TalkStates.chatting)
-async def process_talk(message: Message, state: FSMContext):
-    data = await state.get_data()
-    person_key = data.get("person_key")
-    person = PERSONS[person_key]
-
-    wait_msg = await message.answer("🤔 Думаю над ответом...")
-
-    # запрос к личности
-    answer = await talk_to_person(person["prompt"], message.text)
-
-    await wait_msg.delete()
     # отвечаем + снова кнопка "Закончить" (диалог продолжается)
     await message.answer(answer, reply_markup=talk_finish_keyboard())
 
@@ -280,18 +257,9 @@ async def process_gpt_question(message: Message, state: FSMContext):
 async def cmd_quiz(message: Message, state: FSMContext):
     await state.clear()
 
-    # 1. Проверяем, есть ли картинка
-    photo_path = "images/quiz.jpg"
-    if not os.path.exists(photo_path):
-        await message.answer(
-            "⚙️ Данный функционал временно не работает: "
-            "ведутся технические работы (отсутствует изображение quiz.jpg)."
-        )
+    # Проверяем и отправляем картинку
+    if not await send_image_or_block(message, "quiz.jpg"):
         return
-
-    # 2. Отправляем заготовленное изображение
-    photo = FSInputFile(photo_path)
-    await message.answer_photo(photo)
 
     topics = await quiz_get_topics()
     await state.update_data(topics=topics)
