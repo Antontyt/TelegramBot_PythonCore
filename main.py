@@ -57,7 +57,7 @@ FALLBACK_PHRASES = [
     "Это что-то новенькое 😅 Я пока такому не обучен.",
     "Я живой, честно! Просто не разобрал команду 🤖",
     "Мои нейроны напряглись, но не сработали 🧠",
-    "Кажется, мы говорим на разных языках 😄",
+    "Кажется, мы говорим на разных языках 😄"
 ]
 
 def build_commands_list(exclude: set = None) -> str:
@@ -123,7 +123,7 @@ async def send_talk(message: Message):
     photo_path = "images/talk.jpg"
     if not os.path.exists(photo_path):
         await message.answer(
-            "⚙️ Данный функционал временно не работает: "
+            "⚙️ Данный функционал временно не работает: \n"
             "ведутся технические работы (отсутствует изображение talk.jpg)."
         )
         return
@@ -135,7 +135,7 @@ async def send_talk(message: Message):
     # 3. Показываем выбор личности
     await message.answer(
         "С кем хочешь пообщаться? Выбери личность 👇",
-        reply_markup=talk_persons_keyboard(),
+        reply_markup=talk_persons_keyboard()
     )
 
 def plural(number: int, one: str, few: str, many: str) -> str:
@@ -181,8 +181,17 @@ async def command_random_handler(message: Message):
 
 @dp.message(Command("gpt"))
 async def cmd_gpt(message: Message, state: FSMContext):
-    # отсылаем заготовленное изображение
-    photo = FSInputFile("images/gpt.jpg")
+    # 1. Проверяем, есть ли картинка
+    photo_path = "images/gpt.jpg"
+    if not os.path.exists(photo_path):
+        await message.answer(
+            "⚙️ Данный функционал временно не работает: "
+            "ведутся технические работы (отсутствует изображение gpt.jpg)."
+        )
+        return
+
+    # 2. Отправляем заготовленное изображение
+    photo = FSInputFile(photo_path)
     await message.answer_photo(photo)
 
     # приглашаем задать вопрос
@@ -213,7 +222,7 @@ async def choose_person(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
         f"Ты общаешься с {person['name']}.\n"
         "Напиши сообщение 👇",
-        reply_markup=talk_finish_keyboard(),
+        reply_markup=talk_finish_keyboard()
     )
 
 # --- обработка сообщений в режиме диалога ---
@@ -229,7 +238,6 @@ async def process_talk(message: Message, state: FSMContext):
     answer = await talk_to_person(person["prompt"], message.text)
 
     await wait_msg.delete()
-    # отвечаем + снова кнопка "Закончить" (диалог продолжается)
     await message.answer(answer, reply_markup=talk_finish_keyboard())
 
 # --- обработка сообщений в режиме диалога ---
@@ -272,7 +280,17 @@ async def process_gpt_question(message: Message, state: FSMContext):
 async def cmd_quiz(message: Message, state: FSMContext):
     await state.clear()
 
-    photo = FSInputFile("images/quiz.jpg")
+    # 1. Проверяем, есть ли картинка
+    photo_path = "images/quiz.jpg"
+    if not os.path.exists(photo_path):
+        await message.answer(
+            "⚙️ Данный функционал временно не работает: "
+            "ведутся технические работы (отсутствует изображение quiz.jpg)."
+        )
+        return
+
+    # 2. Отправляем заготовленное изображение
+    photo = FSInputFile(photo_path)
     await message.answer_photo(photo)
 
     topics = await quiz_get_topics()
@@ -349,7 +367,6 @@ async def quiz_process_answer(message: Message, state: FSMContext):
         correct_count += 1
     elif is_correct is False:
         wrong_count += 1
-    # is_correct is None -> сбой проверки, не засчитываем
 
     await state.update_data(
         correct_count=correct_count,
@@ -415,10 +432,10 @@ async def voice_command(message: Message):
 @dp.callback_query(F.data == "voice_finish")
 async def voice_finish(callback: CallbackQuery):
     voice_mode.discard(callback.from_user.id)
-    await callback.message.edit_reply_markup(reply_markup=None)  # убираем кнопку
+    await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer("✅ Голосовая беседа завершена.")
-    await send_start_message(callback.message)                       # ← показываем меню /start
-    await callback.answer()  # убираем «часики» на кнопке
+    await send_start_message(callback.message)
+    await callback.answer()
 
 @dp.message(F.voice)
 async def voice_handler(message: Message):
@@ -436,24 +453,24 @@ async def voice_handler(message: Message):
         await message.bot.download(message.voice, destination=file_path)
 
         # ЭТАП 1: распознавание
-        status_msg = await message.answer("⏳ Идёт обработка...")   # ← показали
+        status_msg = await message.answer("⏳ Идёт обработка...")
         text = await speech_to_text(file_path)
 
         if not text:
-            await status_msg.delete()                              # ← убрали
+            await status_msg.delete()
             await message.answer(
                 "⚠️ Не удалось распознать речь. Попробуй ещё раз 🎤",
                 reply_markup=voice_finish_keyboard(),
             )
             return
 
-        await status_msg.delete()                                  # ← убрали
+        await status_msg.delete()
         await message.answer(f"🗣 {text}")
 
         # ЭТАП 2: генерация ответа
-        status_msg = await message.answer("⏳ Подготавливаю ответ...")  # ← показали
+        status_msg = await message.answer("⏳ Подготавливаю ответ...")
         answer = await ask_assistant(text)
-        await status_msg.delete()                                  # ← убрали
+        await status_msg.delete()
 
         await message.answer(f"🤖 {answer}", reply_markup=voice_finish_keyboard())
 
@@ -512,19 +529,19 @@ async def fallback(message: Message):
 async def finish_button(callback: CallbackQuery):
     await hide_keyboard(callback)
     await callback.message.answer(MENU_HINT)
-    await callback.answer()                # ← ДОБАВИТЬ (убрать часики)
+    await callback.answer()
 
 @dp.callback_query(F.data == "talk_finish")
 async def talk_finish_button(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await hide_keyboard(callback)
     await send_start_message(callback.message)
-    await callback.answer()                # ← ДОБАВИТЬ (убрать часики)
+    await callback.answer()
 
 @dp.callback_query(F.data == "more_fact")
 async def more_fact_button(callback: CallbackQuery):
     await callback.answer()
-    await send_random(callback.message)  # работает как /random
+    await send_random(callback.message)
 
 async def main():
     try:

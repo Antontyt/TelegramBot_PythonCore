@@ -205,7 +205,7 @@ async def speech_to_text(file_path: str) -> str | None:
             transcript = await client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio,
-                language="ru",        # ← жёстко задаём русский, убираем угадывание
+                language="ru",        # ← жёстко задаём русский
             )
         return transcript.text
 
