@@ -2,6 +2,7 @@ import asyncio
 import os
 import random
 import uuid
+from logger import logger
 from config import TELEGRAM_TOKEN, BOT_VERSION
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
@@ -512,27 +513,28 @@ async def more_fact_button(callback: CallbackQuery):
     await send_random(callback.message)
 
 async def main():
+    logger.info("Запуск бота...")
     while True:
         try:
-            print("Бот запущен")
+            logger.info("Подключение к Telegram...")
             await dp.start_polling(bot)
             break
 
         except TelegramNetworkError:
-            print("Ошибка сети: нет доступа к Telegram. Проверь интернет/VPN")
-            print("Перезапуск через 5 сек...")
+            logger.error("Ошибка сети: нет доступа к Telegram. "
+                         "Проверь интернет/VPN. Перезапуск через 5 сек...")
             await asyncio.sleep(5)
 
         except TelegramUnauthorizedError:
-            print("Ошибка: неверный токен. Проверь корректный ли TELEGRAM_TOKEN в .env")
+            logger.error("Ошибка: неверный токен. Проверь корректный ли TELEGRAM_TOKEN в .env")
             break
 
         except TelegramConflictError:
-            print("Ошибка: этот токен уже используется другим запущенным ботом")
+            logger.error("Ошибка: этот токен уже используется другим запущенным ботом")
             break
 
         except Exception as e:
-            print(f"Неизвестная ошибка: {e}. Перезапуск через 5 сек...")
+            logger.exception(f"Неизвестная ошибка: {e}. Перезапуск через 5 сек...")
             await asyncio.sleep(5)
 
 
