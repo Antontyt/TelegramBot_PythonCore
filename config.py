@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Версия бота — единое место истины 🎯
-BOT_VERSION = "1.0.2"
+BOT_VERSION = "1.0.3"
 
 # Читаем значения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
