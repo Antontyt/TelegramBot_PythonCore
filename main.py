@@ -41,24 +41,57 @@ bot = Bot(
 dp = Dispatcher(storage=storage)
 voice_mode: set[int] = set()
 
+# ============ ЭМОДЗИ / ИКОНКИ ============
+
+EMOJI_OK       = "✅"
+EMOJI_ERROR    = "❌"
+EMOJI_WARNING  = "⚠️"
+EMOJI_THINK    = "🤔"
+EMOJI_FACT     = "💡"
+EMOJI_VOICE    = "🗣"
+EMOJI_GEAR     = "⚙️"
+
+EMOJI_START    = "🚀"
+EMOJI_GPT      = "🤖"
+EMOJI_TALK     = "🎭"
+EMOJI_RANDOM   = "🎲"
+EMOJI_QUIZ     = "🧠"
+EMOJI_STATS    = "📊"
+EMOJI_HELP     = "❓"
+
+EMOJI_WAIT     = "⏳"
+EMOJI_MIC      = "🎙️"
+EMOJI_STAR     = "⭐️"
+EMOJI_INFO     = "ℹ️"
+EMOJI_DOWN     = "👇"
+EMOJI_MUSCLE   = "💪"
+EMOJI_SMILE    = "🙂"
+EMOJI_BOOKMARK = "🔖"
+EMOJI_WAVE     = "👋"
+EMOJI_SAD      = "😔"
+EMOJI_USERS    = "👥"
+EMOJI_BOOK     = "📖"
+
+# =========================================
+
 # ── ЕДИНЫЙ СПИСОК КОМАНД ──
 COMMANDS = {
-    "🚀 /start":  "запустить бота",
-    "🤖 /gpt": "задать вопрос ChatGPT",
-    "🎭 /talk":   "поговорить с известной личностью",
-    "🎲 /random": "получить рандомный факт",
-    "🧠 /quiz": "играть в Квиз",
-    "🎙️ /voice": "пообщаться голосом",
-    "📊 /stats": "общедоступная статистика",
-    "❓ /help":   "показать это сообщение"
+    f"{EMOJI_START} /start":  "запустить бота",
+    f"{EMOJI_GPT} /gpt": "задать вопрос ChatGPT",
+    f"{EMOJI_TALK} /talk":   "поговорить с известной личностью",
+    f"{EMOJI_RANDOM} /random": "получить рандомный факт",
+    f"{EMOJI_QUIZ} /quiz": "играть в Квиз",
+    f"{EMOJI_MIC} /voice": "пообщаться голосом",
+    f"{EMOJI_STATS} /stats": "общедоступная статистика",
+    f"{EMOJI_HELP} /help":   "показать это сообщение"
 }
 
 FALLBACK_PHRASES = [
-    "Хм, я такого не понимаю 🤔",
-    "Это что-то новенькое 😅 Я пока такому не обучен.",
-    "Я живой, честно! Просто не разобрал команду 🤖",
-    "Мои нейроны напряглись, но не сработали 🧠",
-    "Кажется, мы говорим на разных языках 😄"
+    f"Хм, я такого не понимаю {EMOJI_THINK}",
+    f"Это что-то новенькое {EMOJI_SMILE} Я пока такому не обучен.",
+    f"Я живой, честно! Просто не разобрал команду {EMOJI_GPT}",
+    f"Мои нейроны напряглись, но не сработали {EMOJI_QUIZ}",
+    f"Кажется, мы говорим на разных языках {EMOJI_SMILE}"
 ]
 
 def build_commands_list(exclude: set = None) -> str:
@@ -71,7 +104,7 @@ def build_commands_list(exclude: set = None) -> str:
     ]
     return "\n".join(lines)
 
-async def send_image_or_block(message: Message, filename: str) -> bool:
+async def send_image_or_warning(message: Message, filename: str) -> bool:
     """
     Отправляет картинку из папки images/.
     Возвращает True — если фото отправлено,
@@ -81,7 +114,7 @@ async def send_image_or_block(message: Message, filename: str) -> bool:
 
     if not os.path.exists(photo_path):
         await message.answer(
-            f"⚙️ Данный функционал временно не работает: \n"
+            f"{EMOJI_GEAR} Данный функционал временно не работает: \n"
             f"ведутся технические работы (отсутствует изображение {filename})."
         )
         return False
@@ -93,12 +126,12 @@ async def send_image_or_block(message: Message, filename: str) -> bool:
 GITHUB_URL = "https://github.com/Antontyt/TelegramBot_PythonCore"
 
 MENU_HINT = (
-    "Вот что ещё можно попробовать 👇\n\n"
+    f"Вот что ещё можно попробовать {EMOJI_DOWN} \n\n"
     + build_commands_list(exclude={"/start", "/help"})
 )
 
 HELP_TEXT = (
-    "📖 Справка:\n\n"
+    f"{EMOJI_BOOK} Справка:\n\n"
     + build_commands_list()
 )
 
@@ -116,11 +149,12 @@ class QuizStates(StatesGroup):
 # ---------- ЛОГИКА (общие функции для команд и кнопок) ----------
 async def send_random(message: Message):
     # Проверяем и отправляем картинку
-    if not await send_image_or_block(message, "fact.jpg"):
+    if not await send_image_or_warning(message, "fact.jpg"):
+        logger.debug("send_random заблокирован отсуствующей картинкой - fact.jpg")
         return
 
     # Сообщаем, что думаем (запрос к ChatGPT занимает время)
-    wait_msg = await message.answer("Придумываю факт... 🤔")
+    wait_msg = await message.answer(f"Придумываю факт... {EMOJI_THINK}")
 
     # Запрос к ChatGPT
     fact = await get_random_fact()
@@ -131,12 +165,13 @@ async def send_random(message: Message):
 
 async def send_talk(message: Message):
     # Проверяем и отправляем картинку
-    if not await send_image_or_block(message, "talk.jpg"):
+    if not await send_image_or_warning(message, "talk.jpg"):
+        logger.debug("send_random заблокирован отсуствующей картинкой - talk.jpg")
         return
 
     # Показываем выбор личности
     await message.answer(
-        "С кем хочешь пообщаться? Выбери личность 👇",
+        f"С кем хочешь пообщаться? Выбери личность {EMOJI_DOWN}",
         reply_markup=talk_persons_keyboard()
     )
 
@@ -162,14 +197,14 @@ async def send_start_message(message: Message):
     add_user(message.from_user.id)
     stats = get_stats()
     text = (
-        "📊 Статистика за всё время моей работы:\n"
-        f"👥 Пользователей: {stats['users_count']}\n"
-        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}\n\n"
+        f"{EMOJI_STATS} Статистика за всё время моей работы:\n"
+        f"{EMOJI_USERS} Пользователей: {stats['users_count']}\n"
+        f"{EMOJI_GPT} Запросов к ChatGPT: {stats['gpt_requests']}\n\n"
         "Привет! Я бот, и вот мои полезные сервисы для тебя:\n\n"
         f"{build_commands_list(exclude={'/start', '/help'})}"
-        f"\n\n💡 Понравился проект?\nБуду рад обратной связи и звёздочке ⭐️"
+        f"\n\n{EMOJI_FACT} Понравился проект?\nБуду рад обратной связи и звёздочке {EMOJI_STAR}"
         f"\n{GITHUB_URL}"
-        f"\n🔖 Версия: {BOT_VERSION}"
+        f"\n{EMOJI_BOOKMARK} Версия: {BOT_VERSION}"
     )
     await message.answer(text)
 
@@ -184,11 +219,12 @@ async def command_random_handler(message: Message):
 @dp.message(Command("gpt"))
 async def cmd_gpt(message: Message, state: FSMContext):
     # Проверяем и отправляем картинку
-    if not await send_image_or_block(message, "gpt.jpg"):
+    if not await send_image_or_warning(message, "gpt.jpg"):
+        logger.debug("send_random заблокирован отсуствующей картинкой - gpt.jpg")
         return
 
     # приглашаем задать вопрос
-    await message.answer("Напиши свой вопрос для ChatGPT 🤖")
+    await message.answer(f"Напиши свой вопрос для ChatGPT {EMOJI_GPT}")
 
     # входим в режим ожидания вопроса
     await state.set_state(GptStates.waiting_for_question)
@@ -214,7 +250,7 @@ async def choose_person(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(
         f"Ты общаешься с {person['name']}.\n"
-        "Напиши сообщение 👇",
+        f"Напиши сообщение {EMOJI_DOWN}",
         reply_markup=talk_finish_keyboard()
     )
 
@@ -225,7 +261,7 @@ async def process_talk(message: Message, state: FSMContext):
     person_key = data.get("person_key")
     person = PERSONS[person_key]
 
-    wait_msg = await message.answer("🤔 Думаю над ответом...")
+    wait_msg = await message.answer(f"{EMOJI_THINK} Думаю над ответом...")
 
     # запрос к личности
     answer = await talk_to_person(person["prompt"], message.text)
@@ -239,7 +275,7 @@ async def process_gpt_question(message: Message, state: FSMContext):
     # диалог завершаем автоматически (требование ТЗ)
     await state.clear()
 
-    wait_msg = await message.answer("🤔 Думаю над ответом...")
+    wait_msg = await message.answer(f"{EMOJI_THINK} Думаю над ответом...")
 
     # запрос к ChatGPT с текстом сообщения
     answer = await ask_assistant(message.text)
@@ -249,7 +285,7 @@ async def process_gpt_question(message: Message, state: FSMContext):
     await message.answer(
         answer
         + "\n\n"
-        + "👋 Диалог завершён.\n"
+        + f"{EMOJI_WAVE} Диалог завершён.\n"
         + "Если нужно повторить — введи команду /gpt "
         + "или воспользуйся командой /start"
     )
@@ -259,14 +295,15 @@ async def cmd_quiz(message: Message, state: FSMContext):
     await state.clear()
 
     # Проверяем и отправляем картинку
-    if not await send_image_or_block(message, "quiz.jpg"):
+    if not await send_image_or_warning(message, "quiz.jpg"):
+        logger.debug("send_random заблокирован отсуствующей картинкой - quiz.jpg")
         return
 
     topics = await quiz_get_topics()
     await state.update_data(topics=topics)
 
     await message.answer(
-        "🧠 Выбери тему квиза:",
+        f"{EMOJI_QUIZ} Выбери тему квиза:",
         reply_markup=quiz_topics_kb(topics),
     )
     await state.set_state(QuizStates.choosing_topic)
@@ -289,13 +326,13 @@ async def quiz_choose_topic(callback: CallbackQuery, state: FSMContext):
     # прячем кнопки выбора темы
     await callback.message.edit_reply_markup(reply_markup=None)
 
-    wait_msg = await callback.message.answer("🤔 Готовлю вопрос...")
+    wait_msg = await callback.message.answer(f"{EMOJI_THINK} Готовлю вопрос...")
     q = await quiz_get_question(topic)
     await wait_msg.delete()
 
     if q is None:
         await callback.message.answer(
-            "😔 Не удалось сгенерировать вопрос. Попробуй ещё раз: /quiz"
+            f"{EMOJI_SAD} Не удалось сгенерировать вопрос. Попробуй ещё раз: /quiz"
         )
         await state.clear()
         return
@@ -306,7 +343,7 @@ async def quiz_choose_topic(callback: CallbackQuery, state: FSMContext):
         correct=q["correct_answer"],
     )
     await callback.message.answer(
-        f"Тема: <b>{topic}</b>\n\n❓ {q['question']}"
+        f"Тема: <b>{topic}</b>\n\n {EMOJI_HELP} {q['question']}"
     )
     await state.set_state(QuizStates.waiting_answer)
 
@@ -319,7 +356,7 @@ async def quiz_process_answer(message: Message, state: FSMContext):
 
     data = await state.get_data()
 
-    wait_msg = await message.answer("🤔 Проверяю ответ...")
+    wait_msg = await message.answer(f"{EMOJI_THINK} Проверяю ответ...")
     result = await quiz_check_answer(
         data["question"], data["correct"], message.text
     )
@@ -342,28 +379,28 @@ async def quiz_process_answer(message: Message, state: FSMContext):
         wrong_count=wrong_count,
     )
 
-    score_line = f"\n\n📊 Счёт: ✅ {correct_count} · ❌ {wrong_count}"
+    score_line = f"\n\n {EMOJI_STATS} Счёт: {EMOJI_OK} {correct_count} · {EMOJI_ERROR} {wrong_count}"
     await message.answer(
         verdict + score_line,
         reply_markup=quiz_after_answer_kb(),
     )
 
-# --- ещё вопрос по той же теме ---
+# --- дополнительные вопросы по выбранной теме QUIZ ---
 @dp.callback_query(QuizStates.waiting_answer, F.data == "quiz:next")
 async def quiz_next(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
 
-    wait_msg = await callback.message.answer("🤔 Готовлю вопрос...")
+    wait_msg = await callback.message.answer(f"{EMOJI_THINK} Готовлю вопрос...")
     q = await quiz_get_question(data["topic"])
     await wait_msg.delete()
 
     if q is None:
-        await callback.message.answer("😔 Не удалось сгенерировать вопрос. Попробуй ещё раз.")
+        await callback.message.answer(f"{EMOJI_SAD} Не удалось сгенерировать вопрос. Попробуй ещё раз.")
         return
 
     await state.update_data(question=q["question"], correct=q["correct_answer"])
-    await callback.message.answer(f"❓ {q['question']}")
+    await callback.message.answer(f"{EMOJI_HELP} {q['question']}")
 
 # --- сменить тему ---
 @dp.callback_query(QuizStates.waiting_answer, F.data == "quiz:change")
@@ -402,7 +439,7 @@ async def voice_command(message: Message):
 async def voice_finish(callback: CallbackQuery):
     voice_mode.discard(callback.from_user.id)
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer("✅ Голосовая беседа завершена.")
+    await callback.message.answer(f"{EMOJI_OK} Голосовая беседа завершена.")
     await send_start_message(callback.message)
     await callback.answer()
 
@@ -411,7 +448,7 @@ async def voice_handler(message: Message):
     user_id = message.from_user.id
 
     if user_id not in voice_mode:
-        await message.answer("ℹ️ Чтобы общаться голосом, включи режим командой /voice.")
+        await message.answer(f"{EMOJI_INFO} Чтобы общаться голосом, включи режим командой /voice.")
         return
 
     os.makedirs("tmp", exist_ok=True)
@@ -421,31 +458,31 @@ async def voice_handler(message: Message):
     try:
         await message.bot.download(message.voice, destination=file_path)
 
-        # ЭТАП 1: распознавание
-        status_msg = await message.answer("⏳ Идёт обработка...")
+        # Распознавание
+        status_msg = await message.answer(f"{EMOJI_WAIT} Идёт обработка...")
         text = await speech_to_text(file_path)
 
         if not text:
             await status_msg.delete()
             await message.answer(
-                "⚠️ Не удалось распознать речь. Попробуй ещё раз 🎤",
+                f"{EMOJI_WARNING} Не удалось распознать речь. Попробуй ещё раз",
                 reply_markup=voice_finish_keyboard(),
             )
             return
 
         await status_msg.delete()
-        await message.answer(f"🗣 {text}")
+        await message.answer(f"{EMOJI_VOICE} {text}")
 
-        # ЭТАП 2: генерация ответа
-        status_msg = await message.answer("⏳ Подготавливаю ответ...")
+        # Генерация ответа
+        status_msg = await message.answer(f"{EMOJI_WAIT} Подготавливаю ответ...")
         answer = await ask_assistant(text)
         await status_msg.delete()
 
-        await message.answer(f"🤖 {answer}", reply_markup=voice_finish_keyboard())
+        await message.answer(f"{EMOJI_GPT} {answer}", reply_markup=voice_finish_keyboard())
 
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка обработки голосового сообщения")
-        logger.error(f"[Voice Handler] {e}")
+        await message.answer(f"{EMOJI_WARNING} Ошибка обработки голосового сообщения")
+        logger.error(f"Voice Handler Error: {e}", exc_info=True)
     finally:
         try:
             if os.path.exists(file_path):
@@ -458,7 +495,7 @@ async def voice_handler(message: Message):
 async def text_in_voice_mode(message: Message):
     await message.answer(
         "🎤 В этом режиме мы общаемся только голосовыми сообщениями.\n\n"
-        "Но ты всегда можешь воспользоваться другими режимами, которые у меня есть 🙂",
+        f"Но ты всегда можешь воспользоваться другими режимами, которые у меня есть {EMOJI_SMILE}",
         reply_markup=voice_finish_keyboard(),
     )
 
@@ -466,9 +503,9 @@ async def text_in_voice_mode(message: Message):
 async def command_stats_handler(message: Message):
     stats = get_stats()
     text = (
-        "📊 Статистика за всё время моей работы:\n"
+        f"{EMOJI_STATS} Статистика за всё время моей работы:\n"
         f"👥 Пользователей: {stats['users_count']}\n"
-        f"🤖 Запросов к ChatGPT: {stats['gpt_requests']}"
+        f"{EMOJI_GPT} Запросов к ChatGPT: {stats['gpt_requests']}"
     )
     await message.answer(text)
 
@@ -487,7 +524,7 @@ async def fallback(message: Message):
 
     text = (
         f"Я уже поработал с {users} {users_word} "
-        f"и выполнил {requests} {req_word} к ChatGPT 💪\n"
+        f"и выполнил {requests} {req_word} к ChatGPT {EMOJI_MUSCLE}\n"
         "\n"
         f"{random.choice(FALLBACK_PHRASES)}\n"
         "\n"
