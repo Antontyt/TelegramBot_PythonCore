@@ -447,8 +447,12 @@ async def voice_handler(message: Message):
         await message.answer(f"⚠️ Ошибка обработки голосового сообщения")
         logger.error(f"[Voice Handler] {e}")
     finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.debug(f"Удалён temp: {file_path}")
+        except Exception as e:
+            logger.warning(f"Не удалил temp {file_path}: {e}")
 
 @dp.message(F.text, lambda m: m.from_user.id in voice_mode)
 async def text_in_voice_mode(message: Message):
