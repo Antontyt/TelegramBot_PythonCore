@@ -445,7 +445,7 @@ async def voice_handler(message: Message):
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка обработки голосового сообщения")
-        print(f"[Voice Handler] {e}")
+        logger.error(f"[Voice Handler] {e}")
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
