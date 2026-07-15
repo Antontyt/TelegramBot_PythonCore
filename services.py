@@ -2,6 +2,7 @@ import json  # добавить к импортам в начало файла
 from openai import AsyncOpenAI, APIStatusError, APIConnectionError, RateLimitError
 from config import OPENAI_API_KEY
 from stats import add_gpt_request
+from logger import logger
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -63,7 +64,7 @@ async def ask_gpt(prompt: str, model: str = DEFAULT_MODEL) -> str:
         return response.choices[0].message.content
 
     except APIStatusError as e:
-        print(f"[OpenAI Error] status={e.status_code}: {e}")   # лог для разработчика
+        logger.error(f"[OpenAI Error] status={e.status_code}: {e}")   # лог для разработчика
         if e.status_code == 403:
             return "🌍 Сервис недоступен из вашего региона. Мы работаем над решением."
         elif e.status_code == 401:
@@ -74,15 +75,15 @@ async def ask_gpt(prompt: str, model: str = DEFAULT_MODEL) -> str:
             return "😔 Сервис временно недоступен. Попробуйте позже."
 
     except RateLimitError:
-        print("[OpenAI Error] rate limit")
+        logger.error("[OpenAI Error] rate limit")
         return "⏳ Превышен лимит запросов. Попробуйте через минуту."
 
     except APIConnectionError:
-        print("[OpenAI Error] connection failed")
+        logger.error("[OpenAI Error] connection failed")
         return "📡 Не удалось связаться с сервисом. Проверьте соединение."
 
     except Exception as e:
-        print(f"[OpenAI Error] unexpected: {e}")
+        logger.error(f"[OpenAI Error] unexpected: {e}")
         return "😔 Что-то пошло не так. Попробуйте позже."
 
 async def get_random_fact() -> str:
@@ -126,7 +127,7 @@ async def quiz_get_topics() -> list[str]:
         if topics:
             return topics
     except (json.JSONDecodeError, KeyError, TypeError):
-        print(f"[Quiz] не удалось распарсить темы: {raw!r}")
+        logger.error(f"[Quiz] не удалось распарсить темы: {raw!r}")
     return FALLBACK_TOPICS
 
 async def quiz_get_question(topic: str) -> dict | None:
@@ -146,7 +147,7 @@ async def quiz_get_question(topic: str) -> dict | None:
         if "question" in data and "correct_answer" in data:
             return data
     except (json.JSONDecodeError, KeyError, TypeError):
-        print(f"[Quiz] не удалось распарсить вопрос: {raw!r}")
+        logger.error(f"[Quiz] не удалось распарсить вопрос: {raw!r}")
     return None
 
 async def quiz_check_answer(question: str, correct_answer: str, user_answer: str) -> dict:
@@ -210,8 +211,8 @@ async def speech_to_text(file_path: str) -> str | None:
         return transcript.text
 
     except (APIStatusError, APIConnectionError, RateLimitError) as e:
-        print(f"[Whisper Error] {e}")
+        logger.error(f"[Whisper Error] {e}")
         return None
     except Exception as e:
-        print(f"[Whisper Error] unexpected: {e}")
+        logger.error(f"[Whisper Error] unexpected: {e}")
         return None
