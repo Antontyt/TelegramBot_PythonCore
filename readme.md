@@ -6,7 +6,7 @@
 
 ## -English
 
-version 1.0.5
+version 1.0.6
 
 Multifunctional Telegram bot powered by OpenAI (ChatGPT + Whisper).
 It answers questions, holds dialogues on behalf of famous personalities,
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 
 ## -Русский
 
-Версия 1.0.5
+Версия 1.0.6
 
 Многофункциональный Telegram-бот на базе OpenAI (ChatGPT + Whisper).
 Отвечает на вопросы, ведёт диалог от лица известных личностей,

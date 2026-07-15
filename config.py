@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Версия бота ---
-BOT_VERSION = "1.0.5"
+BOT_VERSION = "1.0.6"
 
 # --- Уровень логирования ----
 # Варианты: DEBUG / INFO / WARNING / ERROR / CRITICAL
