@@ -46,7 +46,7 @@ QUIZ_TOPICS_PROMPT = (
 FALLBACK_TOPICS = ["История", "Наука", "Космос", "Кино"]
 
 # Модель по умолчанию — если вызывающая функция не указала свою
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5.4-nano"
 
 async def ask_gpt(prompt: str, model: str = DEFAULT_MODEL) -> str:
     """
@@ -100,7 +100,7 @@ async def ask_assistant(user_question: str) -> str:
         "Если не уверен — честно скажи об этом, не выдумывай.\n\n"
         f"Вопрос пользователя: {user_question}"
     )
-    return await ask_gpt(prompt, model="gpt-4o")
+    return await ask_gpt(prompt, model="gpt-5.4-mini")
 
 async def talk_to_person(person_prompt: str, user_message: str) -> str:
     """
